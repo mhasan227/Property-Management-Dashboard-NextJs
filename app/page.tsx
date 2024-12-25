@@ -1,58 +1,80 @@
 'use client';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
-import {getGreeting} from './utils/misc';
+import { getGreeting } from './utils/misc';
 import AddPropertyModal from "./components/AddPropertyModal";
 import Card from "./components/Card";
 import Table from "./components/Table";
 
+interface Property {
+  name: string;
+  type: string;
+  status: string;
+  rent: number;
+}
 function Page() {
   const [greeting, setGreeting] = useState("");
-  const [properties, setProperties] = useState([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [showModal, setShowModal] = useState(false);
 
   // Load properties from localStorage on component mount
   useEffect(() => {
-    const storedProperties = JSON.parse(localStorage.getItem("properties") || []);
-    setProperties(storedProperties);
+    if (typeof window !== "undefined") {
+      const storedProperties = JSON.parse(localStorage.getItem("properties") || "[]");
+      setProperties(storedProperties);
+    }
   }, []);
 
-  const addProperty = (property) => {
+  const addProperty = (property: Property) => {
     const updatedProperties = [...properties, property];
     setProperties(updatedProperties);
-    localStorage.setItem("properties", JSON.stringify(updatedProperties));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("properties", JSON.stringify(updatedProperties));
+    }
   };
 
   useEffect(() => {
     setGreeting(getGreeting());
   }, []);
 
-  const deleteProperty = (index) => {
+  const deleteProperty = (index: number) => {
     const updatedProperties = properties.filter((_, i) => i !== index);
     setProperties(updatedProperties);
-    localStorage.setItem("properties", JSON.stringify(updatedProperties));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("properties", JSON.stringify(updatedProperties));
+    }
   };
 
   const getTotalRent = () => {
-    return properties.reduce((total, property) => total + parseFloat(property.rent || 0), 0).toFixed(2);
+    return properties
+      .reduce(
+        (total, property) => total + (typeof property.rent === "number" ? property.rent : parseFloat(property.rent || "0")),
+        0
+      )
+      .toFixed(2);
   };
-
+  
   const getHighestRentPropertyName = () => {
     if (properties.length === 0) return null;
-
-    let highestRentPropertyName = properties[0]?.name; // first property name
-    let highestRent = parseFloat(properties[0]?.rent); //  first property rent
-
+  
+    let highestRentPropertyName = properties[0]?.name || "N/A";
+    let highestRent =
+      typeof properties[0]?.rent === "number" ? properties[0]?.rent : parseFloat(`${properties[0]?.rent || 0}`);
+  
     for (let i = 1; i < properties.length; i++) {
-      const currentRent = parseFloat(properties[i]?.rent);
+      const currentRent =
+        typeof properties[i]?.rent === "number" ? properties[i]?.rent : parseFloat(`${properties[i]?.rent || 0}`);
+  
       if (currentRent > highestRent) {
         highestRent = currentRent;
-        highestRentPropertyName = properties[i]?.name; // Update the highest rent property name
+        highestRentPropertyName = properties[i]?.name || "N/A";
       }
     }
-
+  
     return highestRentPropertyName;
   };
+  
+  
 
   const highestRentPropertyName = getHighestRentPropertyName();
 
@@ -81,25 +103,11 @@ function Page() {
         </div>
       </div>
 
-      {/* Bottom Half of main section*/}
+      {/* Bottom Half of main section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* First Box */}
-        <Card
-          heading     = "Total Amount"
-          description = {`৳  ${getTotalRent()}`}
-        />
-        {/* Second Box */}
-        <Card
-          heading     = "Property Data"
-          description = {properties?.length}
-        />
-
-        {/* Third Box */}
-        <Card
-          heading     = "Highest Property Name"
-          description = {highestRentPropertyName}
-        />
-
+        <Card heading="Total Amount" description={`৳  ${getTotalRent()}`} />
+        <Card heading="Property Data" description={properties?.length || 0} />
+        <Card heading="Highest Property Name" description={highestRentPropertyName || "N/A"} />
       </div>
 
       {/* Property Management Section */}
@@ -108,19 +116,15 @@ function Page() {
           Property Data
         </h1>
         <div className="flex items-center space-x-4">
-          {/* Filter Dropdown */}
           <select
             className="border rounded-md px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
             onChange={(e) => {
               const filter = e.target.value;
               if (filter === "All") {
-                setProperties(
-                  JSON.parse(localStorage.getItem("properties") || [])
-                );
+                setProperties(JSON.parse(localStorage.getItem("properties") || "[]"));
               } else {
-                const filtered = JSON.parse(
-                  localStorage.getItem("properties") || []
-                ).filter((property) => property.type === filter);
+                const filtered = JSON.parse(localStorage.getItem("properties") || "[]")
+                  .filter((property: Property) => property.type === filter);
                 setProperties(filtered);
               }
             }}
@@ -130,8 +134,6 @@ function Page() {
             <option value="House">House</option>
             <option value="Commercial">Commercial</option>
           </select>
-
-          {/* Add Property Button */}
           <button
             className="bg-gray-950 text-white px-4 py-2 rounded-md shadow-md hover:bg-gray-600"
             onClick={() => setShowModal(true)}
@@ -142,21 +144,12 @@ function Page() {
       </div>
 
       {/* Property Table */}
-      <Table
-        data={properties}
-        deleteItem={deleteProperty}
-      />
+      <Table data={properties} deleteItem={deleteProperty} />
 
       {/* Add Property Modal */}
-      {showModal && (
-        <AddPropertyModal
-          onClose={() => setShowModal(false)}
-          onAddProperty={addProperty}
-        />
-      )}
-      
+      {showModal && <AddPropertyModal onClose={() => setShowModal(false)} onAddProperty={addProperty} />}
     </div>
-  )
+  );
 }
 
-export default Page
+export default Page;
